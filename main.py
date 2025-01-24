@@ -54,7 +54,7 @@ class UrbanRoutesPage:
     input_card_cvv_xpath = (By.XPATH, '//div[@class="card-code-input"]/input[@id="code"]')
     submit_card_xpath = (By.XPATH, '//*[text()="Agregar"]')
     button_close_xpath = (By.XPATH, '//*[@id="root"]/div/div[2]/div[2]/div[1]/button')
-    input_comment_xpath = (By.XPATH, '//*[@id="comment"]')
+    input_comment_css = (By.CSS_SELECTOR, "#comment")    # se agrega un selector adicional tipo CSS
     checkbox_bket_scrvs_xpath = (By.XPATH, '//*[@id="root"]/div/div[3]/div[3]/div[2]/div[2]/div[4]/div[2]/div[1]/div/div[2]/div/span')
     counter_ice_cream = (By.CLASS_NAME, "counter-plus")
     button_smart_order = (By.CLASS_NAME, "smart-button-main")
@@ -181,11 +181,11 @@ class UrbanRoutesPage:
 
     def set_message(self, message):
         self.driver.implicitly_wait(15)
-        message_field = self.driver.find_element(*self.input_comment_xpath)
+        message_field = self.driver.find_element(*self.input_comment_css)
         message_field.send_keys(message)
 
     def get_message(self):
-        return self.driver.find_element(*self.input_comment_xpath).get_property('value')
+        return self.driver.find_element(*self.input_comment_css).get_property('value')
 
     def select_blanket_and_tissues(self):
         self.driver.implicitly_wait(15)
@@ -229,62 +229,90 @@ class TestUrbanRoutes:
         self.driver.get(data.urban_routes_url)
         routes_page = UrbanRoutesPage(self.driver)
 
-        # 1.Configurar la dirección
+    # 1.Configurar la dirección
         address_from = data.address_from
         address_to = data.address_to
-        self.driver.implicitly_wait(10)  # actualización quitando timesleep
+        self.driver.implicitly_wait(10)
         routes_page.set_route(address_from, address_to)
         assert routes_page.get_from() == address_from
         assert routes_page.get_to() == address_to
 
-        # 2.Seleccionar taxi y tarifa
-    def test_select_rate(self):        # Prueba independiente
+    # 2.Seleccionar taxi y tarifa
+    def test_select_rate(self):
         self.home.select_taxi()
         self.home.select_comfort_rate()
-        # comfort_button = self.driver.find_element(*self.home.button_comfort_xpath)
-        # assert comfort_button.active_comfort() == True
 
-        # 3.Rellenar el número de teléfono y obtener código
-    def test_get_tel_code(self):         # Prueba independiente
-        #phone_number = data.phone_number
-        self.home.set_phone()
-        #assert home.get_phone() == phone_number
-        self.home.click_on_next_button()
-        self.home.code_number()
-        self.home.send_cell_info()
+        # Verificar que la tarifa de confort se haya seleccionado correctamente
+        comfort_rate_button = self.driver.find_element(*self.home.button_comfort_xpath)
+        assert 'tcard active' in comfort_rate_button.get_attribute('class'), "La tarifa comfort no fue seleccionada"
 
-        # 4.Agregar una tarjeta de crédito
-    def test_add_creditcard(self):        # Prueba independiente
-        self.home.card_register()
-        self.home.add_card()
-        self.home.close_modal()
-       # assert home.get_card_input() == data.card_number
-       # assert home.get_cvv_card() == data.card_code
+    # 3.Rellenar el número de teléfono y obtener código
+    def test_get_tel_code(self):
+         self.home.set_phone()
+         self.home.click_on_next_button()
+         self.home.code_number()
+         self.home.send_cell_info()
 
-        # 5.Escribir un mensaje para el controlador
-    def test_send_message(self):                # Prueba independiente
-        message = data.message_for_driver
-        self.home.set_message(message)
-        # assert home.get_message() == data.message_for_driver
+         # Verificar que el teléfono ingresado es el esperado
+         phone_number = self.home.get_phone()
+         assert phone_number == data.phone_number,f"Número esperado {data.phone_number}, pero se tiene {phone_number}"
 
-        # 6.Pedir una manta y pañuelos
-    def test_add_blanket_and_tissues(self):       # Prueba independiente
+    # 4.Agregar una tarjeta de crédito
+    def test_add_creditcard(self):
+         self.home.card_register()
+         self.home.add_card()
+         self.home.close_modal()
+
+         # Verificar que el número de tarjeta ingresado es el esperado
+         card_number = self.home.get_card_input()
+         assert card_number == data.card_number, f"credit card esperada {data.card_number}, pero se tiene {card_number}"
+
+         # Verificar que el código CVV ingresado es el esperado
+         cvv_code = self.home.get_cvv_card()
+         assert cvv_code == data.card_code, f"CVV code esperado {data.card_code}, pero se tiene {cvv_code}"
+
+    # 5.Escribir un mensaje para el controlador
+    def test_send_message(self):
+         message = data.message_for_driver
+         self.home.set_message(message)
+
+         # Verificar que el mensaje se haya ingresado correctamente
+         entered_message = self.home.get_message()
+         assert entered_message == message, f"Mensaje esperado {message}, pero se tiene {entered_message}"
+
+    # 6.Pedir una manta y pañuelos
+    def test_add_blanket_and_tissues(self):
         self.home.select_blanket_and_tissues()
-        # assert home.get_blanket_and_scarves() == routes_page.select_blanket_and_tissues()
+        self.home.get_blanket_and_scarves()
 
-        # 7.Pedir 2 helados
-    def test_add_two_icecream(self):             # Prueba independiente
+        # Verificar que la opción de manta y pañuelos se ha seleccionado
+        # blanket_and_scarves = self.home.get_blanket_and_scarves()
+        # assert blanket_and_scarves == 'true', "Se espera que se seleccionen manta y pañuelos"
+
+
+    # 7.Pedir 2 helados
+    def test_add_two_icecream(self):
         self.home.select_ice_cream()
-        # assert home.get_ice_cream() == routes_page.select_ice_cream()
 
-        # 8.Aparece el modal para buscar un taxi
-    def test_order_modal(self):                  # Prueba independiente
+        # Verificar que se han seleccionado dos helados
+        # ice_cream_count = self.home.get_ice_cream()
+        # assert ice_cream_count == '2', f"Expected 2 ice creams, but got {ice_cream_count}"
+
+
+
+    # 8.Aparece el modal para buscar un taxi
+    def test_order_modal(self):
         self.home.select_order()
 
-        # 9.Esperar a que aparezca la información del conductor en el modal
-    def test_driver_modal(self):                # Prueba independiente
+
+
+    # 9.Esperar a que aparezca la información del conductor en el modal
+    def test_driver_modal(self):
         self.home.driver_modal()
 
+        # Verificar que el modal del conductor está visible
+        #modal_displayed = self.driver.find_element(*self.home.modal_order).is_displayed()
+        #assert modal_displayed, "Driver modal is not displayed"
 
     @classmethod
     def teardown_class(cls):
