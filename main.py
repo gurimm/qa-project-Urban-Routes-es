@@ -54,11 +54,15 @@ class UrbanRoutesPage:
     input_card_cvv_xpath = (By.XPATH, '//div[@class="card-code-input"]/input[@id="code"]')
     submit_card_xpath = (By.XPATH, '//*[text()="Agregar"]')
     button_close_xpath = (By.XPATH, '//*[@id="root"]/div/div[2]/div[2]/div[1]/button')
-    input_comment_css = (By.CSS_SELECTOR, "#comment")    # se agrega un selector adicional tipo CSS
+    input_comment_css = (By.CSS_SELECTOR, "#comment")             # se agrega un selector adicional tipo CSS
     checkbox_bket_scrvs_xpath = (By.XPATH, '//*[@id="root"]/div/div[3]/div[3]/div[2]/div[2]/div[4]/div[2]/div[1]/div/div[2]/div/span')
+    checkbox_slide_bket_scrvs_xpath = (By.XPATH, '//*[@id="root"]/div/div[3]/div[3]/div[2]/div[2]/div[4]/div[2]/div[1]/div/div[2]/div/input')
     counter_ice_cream = (By.CLASS_NAME, "counter-plus")
+    counter_ice_cream_value_2 = (By.XPATH, '//*[@id="root"]/div/div[3]/div[3]/div[2]/div[2]/div[4]/div[2]/div[3]/div/div[2]/div[1]/div/div[2]/div/div[2]')
     button_smart_order = (By.CLASS_NAME, "smart-button-main")
+    order_header_title = (By.CLASS_NAME, 'order-header-title')
     modal_order = (By.CLASS_NAME, "order-details")
+
 
     def __init__(self, driver):
         self.driver = driver
@@ -191,27 +195,28 @@ class UrbanRoutesPage:
         self.driver.implicitly_wait(15)
         self.driver.find_element(*self.checkbox_bket_scrvs_xpath).click()
 
-    def get_blanket_and_scarves(self):
-        return self.driver.find_element(*self.checkbox_bket_scrvs_xpath).get_property('value')
+
+    def get_slider_status(self):
+        return self.driver.find_element(*self.checkbox_slide_bket_scrvs_xpath).is_selected()
+
+    def get_icecream_counter(self):
+        return self.driver.find_element(*self.counter_ice_cream_value_2).text
 
     def select_ice_cream(self):
         self.driver.implicitly_wait(15)
         self.driver.find_element(*self.counter_ice_cream).click()
         self.driver.find_element(*self.counter_ice_cream).click()
 
-    def get_ice_cream(self):
-        return self.driver.find_element(*self.counter_ice_cream).get_property('value')
-
     def select_order(self):
         self.driver.implicitly_wait(15)
         self.driver.find_element(*self.button_smart_order).click()
 
+    def get_order_header_title(self):
+        return self.driver.find_element(*self.order_header_title).text
 
-    def driver_modal(self):
-        self.driver.implicitly_wait(100)
-        self.driver.find_element(*self.modal_order)
-        self.driver.implicitly_wait(100)
 
+    def get_driver_modal_info(self):
+        return self.driver.find_element(*self.order_header_title).text
 
 class TestUrbanRoutes:
     driver = None
@@ -283,37 +288,39 @@ class TestUrbanRoutes:
     # 6.Pedir una manta y pañuelos
     def test_add_blanket_and_tissues(self):
         self.home.select_blanket_and_tissues()
-        self.home.get_blanket_and_scarves()
+        self.home.get_slider_status()
 
         # Verificar que la opción de manta y pañuelos se ha seleccionado
-        # blanket_and_scarves = self.home.get_blanket_and_scarves()
-        # assert blanket_and_scarves == 'true', "Se espera que se seleccionen manta y pañuelos"
-
+        assert self.home.get_slider_status() == True
 
     # 7.Pedir 2 helados
     def test_add_two_icecream(self):
         self.home.select_ice_cream()
 
         # Verificar que se han seleccionado dos helados
-        # ice_cream_count = self.home.get_ice_cream()
-        # assert ice_cream_count == '2', f"Expected 2 ice creams, but got {ice_cream_count}"
-
-
+        assert self.home.get_icecream_counter() == '2'
 
     # 8.Aparece el modal para buscar un taxi
     def test_order_modal(self):
         self.home.select_order()
-
+        order_header_title = self.home.get_order_header_title()
+        assert 'Buscar automóvil' in order_header_title
 
 
     # 9.Esperar a que aparezca la información del conductor en el modal
     def test_driver_modal(self):
-        self.home.driver_modal()
+        # Esperar a que el modal se actualice
+        time.sleep(40)
 
-        # Verificar que el modal del conductor está visible
-        #modal_displayed = self.driver.find_element(*self.home.modal_order).is_displayed()
-        #assert modal_displayed, "Driver modal is not displayed"
+        # Verificar que el modal actualiza con el conductor visible
+        order_header_title = self.home.get_driver_modal_info()
+        assert 'El conductor llegará' in order_header_title, f"Se esperaba 'El conductor llegará', pero se tiene: {order_header_title}"
+
 
     @classmethod
     def teardown_class(cls):
          cls.driver.quit()
+
+
+
+#self.driver.implicitly_wait(30)
